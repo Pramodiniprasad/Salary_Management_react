@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { EmptyState } from './Feedback.jsx';
 
-export function DataTable({ columns, rows, rowKey = 'id', searchable = true, pageSize = 8, emptyMessage }) {
+export function DataTable({ columns, rows, rowKey = 'id', searchable = true, pageSize = 8, emptyMessage, toolbarContent }) {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
@@ -20,7 +20,10 @@ export function DataTable({ columns, rows, rowKey = 'id', searchable = true, pag
             <span className="sr-only">Search records</span>
             <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search records…" />
           </label>
-          <span className="muted">{filtered.length} {filtered.length === 1 ? 'result' : 'results'}</span>
+          <div className="table-toolbar-actions">
+            {toolbarContent}
+            <span className="muted">{filtered.length} {filtered.length === 1 ? 'result' : 'results'}</span>
+          </div>
         </div>
       )}
       <div className="table-scroll">

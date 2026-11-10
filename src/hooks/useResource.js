@@ -19,5 +19,5 @@ export function useResource(loader, dependencies = []) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
   useEffect(() => { refresh(); }, [refresh]);
-  return { data, setData, loading, error, refresh };
+  return { data, loading, error, refresh };
 }

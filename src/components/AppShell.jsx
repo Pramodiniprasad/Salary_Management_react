@@ -1,7 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { canManageEmployees, canManageHr, canManageSalaries, ROLE_LABELS } from '../utils/roles.js';
-import { ErrorMessage } from './Feedback.jsx';
+import { canManageEmployees, canManageSalaries, ROLE_LABELS } from '../utils/roles.js';
+import { getOrganizationName } from '../utils/organization.js';
 import { useState } from 'react';
 
 function NavItem({ to, children, end = false }) {
@@ -11,16 +11,22 @@ function NavItem({ to, children, end = false }) {
 export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [logoutError, setLogoutError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isEmployee = user.role === 'employee';
+  const organizationName = getOrganizationName(user);
 
   async function handleLogout() {
-    setLogoutError('');
+    setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/login', { replace: true, state: { notice: 'You have been signed out.' } });
     } catch (error) {
-      setLogoutError(error.response?.data?.message || error.message || 'Unable to sign out.');
+      navigate('/login', {
+        replace: true,
+        state: { warning: error.response?.data?.message || error.message || 'Your local session ended, but the server could not confirm sign out.' },
+      });
+    } finally {
+      setIsLoggingOut(false);
     }
   }
 
@@ -32,21 +38,28 @@ export function AppShell() {
         <nav className="side-nav">
           <NavItem to="/" end>Overview</NavItem>
           {canManageEmployees(user.role) && <NavItem to="/employees">Employees</NavItem>}
-          {canManageHr(user.role) && <NavItem to="/hr">HR team</NavItem>}
           {(canManageSalaries(user.role) || isEmployee) && <NavItem to={isEmployee ? '/my-salary' : '/salaries'}>{isEmployee ? 'My salary' : 'Salary management'}</NavItem>}
-          {user.role === 'hr' && <NavItem to="/salary-history">Salary history</NavItem>}
-          {isEmployee && <NavItem to="/my-profile">My profile</NavItem>}
+          <NavItem to="/my-profile">My profile</NavItem>
         </nav>
         <div className="sidebar-bottom">
           <div className="user-avatar">{String(user.name ?? user.full_name ?? user.email ?? 'U').trim().charAt(0).toUpperCase()}</div>
           <div className="user-meta"><strong>{user.name ?? user.full_name ?? user.email}</strong><span>{ROLE_LABELS[user.role] || user.role}</span></div>
-          <button className="logout-button" onClick={handleLogout} aria-label="Sign out" title="Sign out">↗</button>
+          <button className="button secondary sidebar-logout" onClick={handleLogout} disabled={isLoggingOut}>
+            {isLoggingOut ? 'Signing out…' : 'Sign out'}
+          </button>
         </div>
       </aside>
       <main className="main-content">
-        <header className="topbar"><span className="topbar-label">Salary management</span><span className="user-email">{user.email}</span></header>
+        <header className="topbar">
+          <span className="topbar-label">{organizationName}</span>
+          <div className="topbar-actions">
+            <Link className="profile-link" to="/my-profile">{user.name ?? user.full_name ?? user.email}</Link>
+            <button className="button secondary topbar-logout" onClick={handleLogout} disabled={isLoggingOut}>
+              <span aria-hidden="true">↪</span>{isLoggingOut ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
+        </header>
         <div className="content-wrap">
-          <ErrorMessage>{logoutError}</ErrorMessage>
           <Outlet />
         </div>
       </main>

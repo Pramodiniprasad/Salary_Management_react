@@ -4,9 +4,9 @@ import { ErrorMessage, LoadingState } from '../../components/Feedback.jsx';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { employeesApi, getErrorMessage } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { canManageEmployees } from '../../utils/roles.js';
+import { formatEmploymentStatus } from '../../utils/employmentStatus.js';
 
-const PROFILE_FIELDS = [['Employee ID', 'employee_id'], ['Email address', 'email'], ['Phone', 'phone'], ['Department', 'department'], ['Job title', 'designation'], ['Joining date', 'joining_date'], ['Status', 'status']];
+const PROFILE_FIELDS = [['Employee code', 'employee_code'], ['Email address', 'email'], ['Phone', 'phone'], ['Department', 'department'], ['Job title', 'designation'], ['Joining date', 'date_of_joining'], ['Status', 'employment_status']];
 
 export function EmployeeProfilePage() {
   const { id } = useParams();
@@ -18,17 +18,26 @@ export function EmployeeProfilePage() {
   const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
-    if (isSelf && !employeeId) { setLoading(false); return undefined; }
+    if (isSelf) {
+      setEmployee(user);
+      setLoading(false);
+      return () => { active = false; };
+    }
     if (!employeeId) { setLoading(false); return undefined; }
     employeesApi.get(employeeId).then((result) => { if (active) setEmployee(result?.employee ?? result); })
       .catch((requestError) => { if (active) setError(getErrorMessage(requestError)); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [employeeId, isSelf]);
+  }, [employeeId, isSelf, user]);
   if (loading) return <LoadingState label="Loading profile…" />;
   return <>
-    <PageHeader eyebrow="EMPLOYEE PROFILE" title={employee?.name ?? employee?.full_name ?? 'Employee profile'} description="Employee details and organisation information." action={canManageEmployees(user.role) && <Link className="button secondary" to={`/employees/${employeeId}/edit`}>Edit profile</Link>} />
+    <PageHeader
+      eyebrow={isSelf ? 'MY ACCOUNT' : 'EMPLOYEE PROFILE'}
+      title={isSelf ? 'My profile' : employee?.name ?? employee?.full_name ?? 'Employee profile'}
+      description={isSelf ? 'Your signed-in account details.' : 'Employee details and organisation information.'}
+      action={isSelf && <Link className="button primary" to="/my-profile/edit">Edit profile</Link>}
+    />
     <ErrorMessage>{error}</ErrorMessage>
-    {employee && <section className="detail-card"><div className="profile-summary"><div className="profile-avatar">{String(employee.name ?? employee.full_name ?? 'E').charAt(0).toUpperCase()}</div><div><h2>{employee.name ?? employee.full_name ?? `${employee.first_name ?? ''} ${employee.last_name ?? ''}`}</h2><p>{employee.designation || employee.job_title || 'Employee'}{employee.department ? ` · ${employee.department}` : ''}</p></div></div><div className="detail-grid">{PROFILE_FIELDS.map(([label, key]) => <div className="detail-item" key={key}><span>{label}</span><strong>{employee[key] || '—'}</strong></div>)}</div></section>}
+    {employee && <section className="detail-card"><div className="profile-summary"><div className="profile-avatar">{String(employee.name ?? employee.full_name ?? 'U').charAt(0).toUpperCase()}</div><div><h2>{employee.name ?? employee.full_name ?? `${employee.first_name ?? ''} ${employee.last_name ?? ''}`}</h2><p>{employee.role === 'organization_admin' ? 'Organisation Admin' : employee.role === 'hr' ? 'HR' : employee.role === 'employee' ? 'Employee' : employee.role}</p></div></div><div className="detail-grid">{(isSelf ? [['Name', 'name'], ['Email address', 'email'], ['Role', 'role'], ['Status', 'status'], ['Organisation ID', 'organization_id']] : PROFILE_FIELDS).map(([label, key]) => <div className="detail-item" key={key}><span>{label}</span><strong>{key === 'employment_status' ? formatEmploymentStatus(employee[key]) : employee[key] || '—'}</strong></div>)}</div></section>}
   </>;
 }

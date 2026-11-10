@@ -9,9 +9,9 @@ import { EmployeeFormPage } from './pages/organization/EmployeeFormPage.jsx';
 import { HrManagementPage } from './pages/organization/HrManagementPage.jsx';
 import { HrFormPage } from './pages/organization/HrFormPage.jsx';
 import { EmployeeProfilePage } from './pages/employee/EmployeeProfilePage.jsx';
+import { EditMyProfilePage } from './pages/employee/EditMyProfilePage.jsx';
 import { SalaryManagementPage } from './pages/hr/SalaryManagementPage.jsx';
 import { SalaryFormPage } from './pages/hr/SalaryFormPage.jsx';
-import { SalaryHistoryPage } from './pages/hr/SalaryHistoryPage.jsx';
 import { SalarySlipPage } from './pages/employee/SalarySlipPage.jsx';
 
 function App() {
@@ -27,20 +27,26 @@ function App() {
             <Route path="employees/:id/edit" element={<EmployeeFormPage />} />
             <Route path="employees/:id" element={<EmployeeProfilePage />} />
           </Route>
-          <Route element={<RoleRoute roles={['employee']} />}>
+          <Route element={<RoleRoute roles={['organization_admin', 'hr', 'employee']} />}>
             <Route path="my-profile" element={<EmployeeProfilePage />} />
+            <Route path="my-profile/edit" element={<EditMyProfilePage />} />
+          </Route>
+          <Route element={<RoleRoute roles={['employee']} />}>
             <Route path="my-salary" element={<SalaryManagementPage />} />
+          </Route>
+          <Route element={<RoleRoute roles={['organization_admin', 'hr', 'employee']} />}>
             <Route path="salary-slips/:id" element={<SalarySlipPage />} />
           </Route>
-          <Route element={<RoleRoute roles={['organization_admin']} />}>
+          <Route element={<RoleRoute roles={['organization_admin', 'hr']} />}>
             <Route path="hr" element={<HrManagementPage />} />
+          </Route>
+          <Route element={<RoleRoute roles={['organization_admin']} />}>
             <Route path="hr/new" element={<HrFormPage />} />
           </Route>
-          <Route element={<RoleRoute roles={['hr']} />}>
+          <Route element={<RoleRoute roles={['organization_admin', 'hr']} />}>
             <Route path="salaries" element={<SalaryManagementPage />} />
             <Route path="salaries/new" element={<SalaryFormPage />} />
             <Route path="salaries/:id/edit" element={<SalaryFormPage />} />
-            <Route path="salary-history" element={<SalaryHistoryPage />} />
           </Route>
         </Route>
       </Route>

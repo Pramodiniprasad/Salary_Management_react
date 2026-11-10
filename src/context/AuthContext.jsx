@@ -32,13 +32,27 @@ export function AuthProvider({ children }) {
   const setAuthenticatedUser = useCallback((value) => {
     const normalized = normalizeUser(value);
     if (!normalized?.role) throw new Error('The login response did not include a user role.');
+    if (!['organization_admin', 'hr', 'employee'].includes(normalized.role)) {
+      throw new Error('Super Admin accounts use the Rails admin panel and cannot sign in to this frontend.');
+    }
     sessionStorage.setItem('salary_management_user', JSON.stringify(normalized));
     setUser(normalized);
   }, []);
 
   const login = useCallback(async (credentials) => {
-    const response = await authApi.login(credentials);
-    setAuthenticatedUser(response.user);
+    await authApi.login(credentials);
+    try {
+      const currentUser = await authApi.currentUser();
+      setAuthenticatedUser(currentUser?.user ?? currentUser);
+    } catch (error) {
+      await authApi.logout();
+      throw error;
+    }
+  }, [setAuthenticatedUser]);
+
+  const updateProfile = useCallback(async (profile) => {
+    const updatedUser = await authApi.updateProfile(profile);
+    setAuthenticatedUser(updatedUser?.user ?? updatedUser);
   }, [setAuthenticatedUser]);
 
   const logout = useCallback(async () => {
@@ -51,16 +65,21 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let active = true;
-    const savedToken = sessionStorage.getItem('salary_management_token');
-    if (!savedToken && !user) {
+    if (!sessionStorage.getItem('salary_management_access_token')) {
+      sessionStorage.removeItem('salary_management_token_expires_at');
+      sessionStorage.removeItem('salary_management_user');
+      setUser(null);
       setLoading(false);
       return () => { active = false; };
     }
     authApi.currentUser()
-      .then((currentUser) => { if (active) setAuthenticatedUser(currentUser?.user ?? currentUser); })
+      .then((currentUser) => {
+        if (active) setAuthenticatedUser(currentUser?.user ?? currentUser);
+      })
       .catch(() => {
         if (active) {
-          sessionStorage.removeItem('salary_management_token');
+          sessionStorage.removeItem('salary_management_access_token');
+          sessionStorage.removeItem('salary_management_token_expires_at');
           sessionStorage.removeItem('salary_management_user');
           setUser(null);
         }
@@ -71,6 +90,8 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const onUnauthorized = () => {
+      sessionStorage.removeItem('salary_management_access_token');
+      sessionStorage.removeItem('salary_management_token_expires_at');
       sessionStorage.removeItem('salary_management_user');
       setUser(null);
     };
@@ -78,7 +99,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  const value = useMemo(() => ({ user, loading, login, logout, updateProfile }), [user, loading, login, logout, updateProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getErrorMessage } from '../../services/api.js';
 import { ROLE_LABELS } from '../../utils/roles.js';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 
 export function LoginPage() {
   const { user, login, loading } = useAuth();
@@ -41,9 +42,11 @@ export function LoginPage() {
           <div className="eyebrow">WELCOME BACK</div>
           <h2>Sign in to your account</h2>
           <p>Use your organisation account to continue.</p>
+          {location.state?.notice && <div className="notice success" role="status">{location.state.notice}</div>}
+          {location.state?.warning && <div className="notice error" role="alert">{location.state.warning}</div>}
           {error && <div className="notice error" role="alert">{error}</div>}
           <label className="field"><span>Email address</span><input type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@organisation.com" /></label>
-          <label className="field"><span>Password</span><input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" /></label>
+          <label className="field"><span>Password</span><PasswordInput autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" /></label>
           <button className="button primary login-submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}<span aria-hidden="true">→</span></button>
           <div className="login-help">Access is provided by your organisation administrator.</div>
         </form>

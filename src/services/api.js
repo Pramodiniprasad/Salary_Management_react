@@ -1,17 +1,23 @@
 import axios from 'axios';
 
-const TOKEN_KEY = 'salary_management_token';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const TOKEN_KEY = 'salary_management_access_token';
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
+  baseURL: '/api/v1',
   headers: { Accept: 'application/json' },
 });
 
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem(TOKEN_KEY);
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const expiresAt = Number(sessionStorage.getItem('salary_management_token_expires_at'));
+  if (token && expiresAt && Date.now() >= expiresAt) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem('salary_management_token_expires_at');
+    sessionStorage.removeItem('salary_management_user');
+    window.dispatchEvent(new Event('auth:unauthorized'));
+    return Promise.reject(new Error('Your session has expired. Please sign in again.'));
+  }
+  if (token) config.headers.Authorization = token;
   return config;
 });
 
@@ -20,6 +26,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem('salary_management_token_expires_at');
       sessionStorage.removeItem('salary_management_user');
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
@@ -40,27 +47,33 @@ export function getErrorMessage(error) {
       .map(([field, value]) => `${field}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join(' · ');
   }
-  return data?.message || error.message || 'Something went wrong. Please try again.';
+  return data?.error || data?.message || error.message || 'Something went wrong. Please try again.';
 }
 
 export const authApi = {
   async login(credentials) {
-    const response = await api.post('/auth/login', credentials);
+    const response = await api.post('/auth/sign_in', { user: credentials });
     const data = payloadData(response);
-    const token = data?.token ?? data?.access_token;
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    return { user: data?.user ?? data, token };
+    const token = response.headers.authorization;
+    if (!token) throw new Error('The sign-in response did not include an Authorization token.');
+    sessionStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem('salary_management_token_expires_at', String(Date.now() + 60 * 60 * 1000));
+    return data?.user ?? data;
   },
   async logout() {
     try {
-      await api.delete('/auth/logout');
+      await api.delete('/auth/sign_out');
     } finally {
       sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem('salary_management_token_expires_at');
       sessionStorage.removeItem('salary_management_user');
     }
   },
   async currentUser() {
-    return payloadData(await api.get('/auth/me'));
+    return payloadData(await api.get('/me'));
+  },
+  async updateProfile(user) {
+    return payloadData(await api.patch('/me', { user }));
   },
 };
 
@@ -83,14 +96,9 @@ const resource = (path) => ({
 });
 
 export const employeesApi = resource('/employees');
-export const hrApi = resource('/hr_users');
+export const usersApi = resource('/users');
 export const salariesApi = resource('/salaries');
-export const salarySlipsApi = {
-  ...resource('/salary_slips'),
-  async download(id) {
-    return api.get(`/salary_slips/${id}/download`, { responseType: 'blob' });
-  },
-};
+export const salarySlipsApi = resource('/salary_slips');
 
 export function unwrapCollection(data, key) {
   if (Array.isArray(data)) return data;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getErrorMessage } from '../services/api.js';
 import { ErrorMessage } from './Feedback.jsx';
+import { PasswordInput } from './PasswordInput.jsx';
 
 export function ResourceForm({ title, initialValues, fields, onSubmit, cancelTo, submitLabel = 'Save changes' }) {
   const navigate = useNavigate();
@@ -41,7 +42,9 @@ export function ResourceForm({ title, initialValues, fields, onSubmit, cancelTo,
             ) : field.type === 'textarea' ? (
               <textarea rows="4" required={field.required} placeholder={field.placeholder} value={values[field.name] ?? ''} onChange={(event) => update(field, event.target.value)} />
             ) : (
-              <input type={field.type || 'text'} required={field.required} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} autoComplete={field.autoComplete} value={values[field.name] ?? ''} onChange={(event) => update(field, event.target.value)} />
+              field.type === 'password'
+                ? <PasswordInput required={field.required} placeholder={field.placeholder} autoComplete={field.autoComplete} value={values[field.name] ?? ''} onChange={(event) => update(field, event.target.value)} />
+                : <input type={field.type || 'text'} required={field.required} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} autoComplete={field.autoComplete} value={values[field.name] ?? ''} onChange={(event) => update(field, event.target.value)} />
             )}
           </label>
         ))}

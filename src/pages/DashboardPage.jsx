@@ -1,17 +1,15 @@
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { canManageEmployees, canManageHr, canManageSalaries } from '../utils/roles.js';
 
 const CARD_CONTENT = {
   organization_admin: [
     { title: 'Manage employees', description: 'View your organisation’s employee directory and update employee records.', to: '/employees', icon: '01' },
-    { title: 'HR team', description: 'Create HR accounts and manage access to employee and salary tools.', to: '/hr', icon: '02' },
+    { title: 'Salary management', description: 'Manage employee salary records and review payroll history.', to: '/salaries', icon: '02' },
   ],
   hr: [
     { title: 'Employee directory', description: 'Create and update employee records for your organisation.', to: '/employees', icon: '01' },
     { title: 'Salary management', description: 'Manage salary records and prepare employee payslips.', to: '/salaries', icon: '02' },
-    { title: 'Salary history', description: 'Review past salary records and payroll periods.', to: '/salary-history', icon: '03' },
   ],
   employee: [
     { title: 'My profile', description: 'View your employee profile and personal information.', to: '/my-profile', icon: '01' },
